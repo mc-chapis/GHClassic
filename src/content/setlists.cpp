@@ -120,7 +120,7 @@ namespace gh2::setlists
 
         // The selected setlist when the provider fills quickplay's list
         // (its +0x30, set_quickplay, is also set for practice and
-        // multiplayer), in quickplay, Face-Off and Pro Face-Off
+        // multiplayer), in quickplay, practice, Face-Off and Pro Face-Off
         // (ui/dta/multiplayer.dta); co-op's is its own career's. The game
         // played's too: GH2's own list reads the Campaign, which holds only
         // the careers of the note engine judging.
@@ -128,7 +128,8 @@ namespace gh2::setlists
         {
             if (load<uint32_t>(rdram, provider + 0x30u) == 0u)
                 return nullptr;
-            if (!modeIs(rdram, "quickplay") && !modeIs(rdram, "multi_vs") && !modeIs(rdram, "multi_fo"))
+            if (!modeIs(rdram, "quickplay") && !modeIs(rdram, "practice") &&
+                !modeIs(rdram, "multi_vs") && !modeIs(rdram, "multi_fo"))
                 return nullptr;
             const auto it = s_setlists.find(selected());
             return it == s_setlists.end() ? nullptr : &it->second;

@@ -83,18 +83,17 @@ int main()
         CHECK(seats[1].none());
     }
 
-    // The keyboard takes no seat, first or after a controller (input.cpp
-    // drives P1's port with it).
+    // The keyboard claims P1 and can hand it to a controller and back.
     {
         Seats seats;
         press(seats, {keyboard(pad::kDown)});
         press(seats, {keyboard(pad::kR2)});
-        CHECK(seats[0].none());
+        CHECK(seats[0] == kKeyboard);
         press(seats, {keyboard(), device(a, pad::kR2)});
         CHECK(seats[0] == a);
         press(seats, {keyboard(pad::kCircle), device(a)});
         press(seats, {keyboard(pad::kStart), device(a)});
-        CHECK(seats[0] == a && seats.seatOf(kKeyboard) < 0);
+        CHECK(seats[0] == kKeyboard && seats.seatOf(a) < 0);
     }
 
     // On Multiplayer's screen Start joins the next free seat, up to
@@ -137,12 +136,29 @@ int main()
         CHECK(seats.seatOf(a) < 0);
     }
 
-    // Nor does it join on Multiplayer's screen.
+    // The keyboard joins P2 on Multiplayer's screen, and yellow trades
+    // seats. Its joining Start is swallowed until released.
     {
         Seats seats;
         press(seats, {device(a, pad::kR2), keyboard()}, Mode::kPlayers);
-        press(seats, {device(a), keyboard(pad::kStart)}, Mode::kPlayers);
-        CHECK(seats[1].none());
+        seats.seat({device(a), keyboard(pad::kStart)}, Mode::kPlayers, 0);
+        CHECK(seats[1] == kKeyboard);
+        CHECK(seats.holding(keyboard(pad::kStart)));
+        CHECK(!seats.holding(keyboard()));
+        press(seats, {device(a), keyboard(pad::kTriangle)}, Mode::kPlayers);
+        CHECK(seats[0] == kKeyboard && seats[1] == a);
+        const auto saved = seats.takeSaved();
+        CHECK(saved && saved->at("p1") == "keyboard" && saved->at("p2") == a.text());
+    }
+
+    // A saved keyboard seat restores alongside a controller, even idle.
+    {
+        Seats seats;
+        seats.restore({{"p1", a.text()}, {"p2", "keyboard"}}, 1000);
+        seats.seat({keyboard(), device(a)}, Mode::kMenu, 10);
+        CHECK(seats[0] == a && seats[1] == kKeyboard);
+        seats.follow({keyboard(), device(a)}, false);
+        CHECK(!seats.away(0) && !seats.away(1));
     }
 
     // Start that seated a device plays nothing until it is let go.
@@ -287,7 +303,7 @@ int main()
     }
 
     // A seat's mode is its controller's as it sits: a gamepad's pad, a
-    // guitar's guitar, none's the keyboard's guitar.
+    // guitar's guitar, none's guitar.
     {
         Seats seats;
         Read pad = device(a), guitar = device(b);

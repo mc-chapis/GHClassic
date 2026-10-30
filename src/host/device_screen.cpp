@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <atomic>
 #include <functional>
+#include <iostream>
 #include <map>
 #include <mutex>
 #include <optional>
@@ -160,9 +161,12 @@ namespace gh2::input
         {
             // The mode it was detected as needs no line.
             const Device *d = deviceById(e.id);
-            if (e.what == BindingEdit::kMode && !d)
+            const bool keyboard = e.id.backend == DeviceId::kKeyboard;
+            if (e.what == BindingEdit::kMode && !d && !keyboard)
                 continue;
-            const DeviceKind swapped = d && d->kind == DeviceKind::kGamepad ? DeviceKind::kGuitar : DeviceKind::kGamepad;
+            const DeviceKind kind = d ? d->kind : kindOf("", "", DeviceKind::kKeyboard);
+            const DeviceKind detected = d ? d->detected : DeviceKind::kKeyboard;
+            const DeviceKind swapped = kind == DeviceKind::kGamepad ? DeviceKind::kGuitar : DeviceKind::kGamepad;
             rewrite(e.id, [&](Section &lines, std::string &mode) {
                 if (e.what == BindingEdit::kReset)
                 {
@@ -170,12 +174,15 @@ namespace gh2::input
                     mode.clear();
                 }
                 else if (e.what == BindingEdit::kMode)
-                    mode = swapped == d->detected ? "" : swapped == DeviceKind::kGamepad ? "pad" : "guitar";
+                    mode = (swapped == detected || (keyboard && swapped == DeviceKind::kGuitar))
+                               ? ""
+                               : swapped == DeviceKind::kGamepad ? "pad" : "guitar";
                 else
                     lines[e.action] = {};
             });
             if (e.what == BindingEdit::kMode)
-                std::cerr << "[input] " << d->name << ": " << (swapped == DeviceKind::kGamepad ? "pad" : "guitar")
+                std::cerr << "[input] " << (d ? d->name : "keyboard") << ": "
+                          << (swapped == DeviceKind::kGamepad ? "pad" : "guitar")
                           << " mode" << std::endl;
         }
 
@@ -252,7 +259,7 @@ namespace gh2::input
         {
             DeviceView v;
             v.id = r.id;
-            v.kind = r.kind;
+            v.kind = r.keyboard() ? kindOf("", "", DeviceKind::kKeyboard) : r.kind;
             v.label = r.keyboard() ? "Keyboard" : r.label;
             const Device *d = deviceById(r.id);
             if (d && ofModel[model(d->id)] > 1)
@@ -268,7 +275,7 @@ namespace gh2::input
             s_views.push_back(v);
         }
         std::stable_partition(s_views.begin(), s_views.end(),
-                              [](const DeviceView &v) { return v.kind != DeviceKind::kKeyboard; });
+                              [](const DeviceView &v) { return v.id.backend != DeviceId::kKeyboard; });
         if (std::none_of(s_views.begin(), s_views.end(), [](const DeviceView &v) { return v.id == s_shown; }))
             s_shown = s_views.empty() ? DeviceId{} : s_views.front().id;
 

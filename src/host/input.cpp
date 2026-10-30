@@ -24,6 +24,7 @@
 #include "host/devices.h"
 #include "host/layouts.h"
 #include "host/owner.h"
+#include "host/pad_presses.h"
 #include "host/scripted_devices.h"
 #include "host/sdl_devices.h"
 #include "host/seats.h"
@@ -68,6 +69,9 @@ namespace gh2
 
         std::mutex s_mutex;
         HostPad s_pads[kSeats];
+        PadPresses s_padPresses[kSeats]; // protected by s_mutex, consumed by libpad
+        DeviceId s_padDevices[kSeats];
+        Presses s_keyboardPresses;
         std::string s_seatNames[kSeats]; // for seatHas
         std::string s_seatLabels[kSeats];
         MenuControls s_menu;
@@ -148,10 +152,30 @@ namespace gh2
                                          (guitar & pad::kCircle ? pad::kTriangle : 0));
         }
 
+        ButtonPresses buttonPresses(const Read &r, const HostPad &pad, Mode mode)
+        {
+            ButtonPresses down{};
+            for (int a = 0; a < kActionCount; ++a)
+            {
+                const uint16_t button = mode == Mode::kPlaying
+                                            ? (pad.joypad ? kJoypadButtons[a] : kActions[a].button)
+                                            : menuButtons(kActions[a].button, pad.joypad);
+                // Only actions that actually reached this port may retrigger:
+                // mode changes, joining and menu shortcuts can suppress them.
+                if ((pad.pressed & button) == 0)
+                    continue;
+                for (int b = 0; b < 16; ++b)
+                    if (button & (1u << b))
+                        down[b] += r.presses[a];
+            }
+            return down;
+        }
+
         Read keyboardRead(const bool *keys)
         {
-            Read r{DeviceId::keyboard(), "keyboard", DeviceKind::kKeyboard, "keyboard"};
+            Read r{DeviceId::keyboard(), "keyboard", kindOf("", "", DeviceKind::kKeyboard), "keyboard"};
             play(keyboardLayout(), Snapshot{}, keys, r.held);
+            r.presses = s_keyboardPresses.read(keyboardLayout(), Snapshot{}, keys);
             return r;
         }
     }
@@ -220,10 +244,19 @@ namespace gh2
                 nameControls(d);
                 Read r{d.id, d.name, d.kind, d.label};
                 play(d.profile, d.now, keys, r.held);
+                r.presses = d.presses.read(d.profile, d.now, keys);
                 reads.push_back(r);
             }
         for (Read &r : reads)
+        {
             r.buttons = padOf(r.held).pressed;
+            // Menu shortcuts claim the keyboard's seat too, even when its
+            // action bindings have been changed in input.ini.
+            if (r.keyboard())
+                for (const MenuKey &k : kMenuKeys)
+                    if (keys[k.key])
+                        r.buttons |= k.bit;
+        }
 
         // On the Controllers screen devices only show there. Leaving it,
         // nothing held there plays until let go: red held to leave would
@@ -258,23 +291,26 @@ namespace gh2
         // it is in a menu, where its green picks and red backs out, a song's
         // own menus too.
         HostPad pads[kSeats];
+        const Read *played[kSeats] = {};
         for (int seat = 0; seat < kSeats; ++seat)
         {
             const bool joypad = s_seats.pad(seat) && songUp();
-            if (seated[seat] && !s_seats.holding(*seated[seat]))
+            // The keyboard adds its menu shortcuts below, on its own seat.
+            if (seated[seat] && !seated[seat]->keyboard() && !s_seats.holding(*seated[seat]))
             {
                 pads[seat] = padOf(seated[seat]->held, joypad);
+                played[seat] = seated[seat];
                 if (mode != Mode::kPlaying)
                     pads[seat].pressed = menuButtons(padOf(seated[seat]->held).pressed, joypad);
             }
             pads[seat].joypad = joypad;
         }
 
-        // The keyboard drives P1, or mid-song the first seat whose controller
-        // is gone, whose pause it is. A press there stands it in for that
-        // controller until it is back, and plays nothing itself.
-        int to = 0;
-        if (inSong(mode))
+        // The keyboard drives its own seat. While unseated, it can stand in
+        // for a missing controller mid-song, until that controller is back.
+        const int keyboardSeat = s_seats.seatOf(DeviceId::keyboard());
+        int to = keyboardSeat;
+        if (to < 0 && inSong(mode))
             for (int seat = 0; seat < kPlayers; ++seat)
                 if (s_seats.away(seat))
                 {
@@ -284,8 +320,9 @@ namespace gh2
         for (int seat = 0; seat < kSeats; ++seat)
         {
             if (!inSong(mode))
-                s_goneBefore[seat].store(seat < kPlayers && s_seats.away(seat), std::memory_order_relaxed);
-            if (!inSong(mode) || !s_seats.away(seat))
+                s_goneBefore[seat].store(keyboardSeat < 0 && seat < kPlayers && s_seats.away(seat),
+                                         std::memory_order_relaxed);
+            if (!inSong(mode) || !s_seats.away(seat) || keyboardSeat >= 0)
                 s_standIn[seat].store(false, std::memory_order_relaxed);
             else if (s_goneBefore[seat].load(std::memory_order_relaxed))
                 s_standIn[seat].store(true, std::memory_order_relaxed);
@@ -296,7 +333,7 @@ namespace gh2
                 bool any = std::any_of(r.held.begin(), r.held.end(), [](float h) { return h > kHeld; });
                 for (const MenuKey &k : kMenuKeys)
                     any = any || keys[k.key];
-                if (any && !s_keyboardWas && inSong(mode) && s_seats.away(to) &&
+                if (any && !s_keyboardWas && keyboardSeat < 0 && to >= 0 && inSong(mode) && s_seats.away(to) &&
                     !s_standIn[to].load(std::memory_order_relaxed))
                 {
                     s_standIn[to].store(true, std::memory_order_relaxed);
@@ -310,16 +347,18 @@ namespace gh2
                     s_keyboardQuiet = true;
                 if (!any)
                     s_keyboardQuiet = false;
-                if (s_keyboardQuiet)
+                const bool holding = keyboardSeat >= 0 && s_seats.holding(r);
+                if (s_keyboardQuiet || holding || to < 0 ||
+                    (keyboardSeat < 0 && !s_standIn[to].load(std::memory_order_relaxed)))
                     break;
 
                 // Its keys as the seat's mode plays them, in a menu as a
                 // menu takes them, its Enter Start only in a song playing.
                 HostPad &port = pads[to];
-                port.pressed |= mode == Mode::kPlaying
-                                    ? padOf(r.held, port.joypad).pressed
-                                    : static_cast<uint16_t>(menuButtons(padOf(r.held).pressed, port.joypad) &
-                                                            ~pad::kStart);
+                played[to] = &r;
+                port = padOf(r.held, port.joypad);
+                if (mode != Mode::kPlaying)
+                    port.pressed = static_cast<uint16_t>(menuButtons(padOf(r.held).pressed, port.joypad) & ~pad::kStart);
                 // Its menu keys. In a song playing only its Esc, as Start,
                 // and in the song's pause menu Esc is Start too.
                 for (const MenuKey &k : kMenuKeys)
@@ -337,6 +376,7 @@ namespace gh2
                                             : menuButtons(k.bit, port.joypad);
                 }
             }
+        const bool modeChanged = s_modeWas != mode;
         s_modeWas = mode;
         if (mode == Mode::kControllers)
             for (HostPad &pad : pads)
@@ -361,8 +401,8 @@ namespace gh2
             SDL_GetRelativeMouseState(&mouseX, &mouseY);
         MenuControls menu;
         const Device *p1 = seated[0] ? deviceById(seated[0]->id) : nullptr;
-        if (p1)
-            menu.kind = p1->kind;
+        if (seated[0])
+            menu.kind = seated[0]->keyboard() ? DeviceKind::kKeyboard : seated[0]->kind;
         const Profile &profile = p1 ? p1->profile : keyboardLayout();
         for (int a = 0; a < kActionCount; ++a)
             if (!profile[static_cast<size_t>(a)].empty())
@@ -372,8 +412,7 @@ namespace gh2
         s_menu = menu;
         for (int seat = 0; seat < kSeats; ++seat)
         {
-            const bool keyboard = !seated[seat] && (s_standIn[seat].load(std::memory_order_relaxed) ||
-                                                    (seat == 0 && s_seats[0].none()));
+            const bool keyboard = !seated[seat] && s_standIn[seat].load(std::memory_order_relaxed);
             s_seatNames[seat] = seated[seat] ? seated[seat]->name : keyboard ? "keyboard" : "";
             s_seatLabels[seat] = seated[seat] ? seated[seat]->label : keyboard ? "keyboard" : "";
         }
@@ -391,6 +430,17 @@ namespace gh2
                 timing::span(timing::kEventToPoll, pad.pressEventNs, pad.pressPollNs);
         }
         std::copy(std::begin(pads), std::end(pads), std::begin(s_pads));
+        for (int seat = 0; seat < kSeats; ++seat)
+        {
+            const DeviceId id = played[seat] ? played[seat]->id : DeviceId{};
+            // Pending presses belong to one device and one screen. They
+            // must never follow a seat trade or leak into a pause menu.
+            if (modeChanged || id != s_padDevices[seat])
+                s_padPresses[seat] = {};
+            s_padDevices[seat] = id;
+            s_padPresses[seat].publish(pads[seat].pressed,
+                                      played[seat] ? buttonPresses(*played[seat], pads[seat], mode) : ButtonPresses{});
+        }
         if (s_flying && keys)
         {
             s_fly.right = (keys[SDL_SCANCODE_D] ? 1.0f : 0.0f) - (keys[SDL_SCANCODE_A] ? 1.0f : 0.0f);
@@ -417,12 +467,25 @@ namespace gh2
         s_open = false;
         std::lock_guard<std::mutex> lock(s_mutex);
         std::fill(std::begin(s_pads), std::end(s_pads), HostPad{});
+        std::fill(std::begin(s_padPresses), std::end(s_padPresses), PadPresses{});
+        std::fill(std::begin(s_padDevices), std::end(s_padDevices), DeviceId{});
+        s_keyboardPresses = {};
     }
 
     HostPad hostPad(int seat)
     {
         std::lock_guard<std::mutex> lock(s_mutex);
         return seat >= 0 && seat < kSeats ? s_pads[seat] : HostPad{};
+    }
+
+    HostPad readHostPad(int seat)
+    {
+        std::lock_guard<std::mutex> lock(s_mutex);
+        if (seat < 0 || seat >= kSeats)
+            return {};
+        HostPad pad = s_pads[seat];
+        pad.pressed = s_padPresses[seat].read();
+        return pad;
     }
 
     bool seatPlugged(int seat)

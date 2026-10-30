@@ -1,11 +1,13 @@
-; A guitar plays P1 and the keyboard, in no seat, drives P1's port too: in
-; the song its Esc and Enter (Start) pause and its Esc resumes, and in the
+; The keyboard claims P1 from a guitar before the song. Its Esc and Enter
+; (Start) pause and its Esc resumes, and in the
 ; pause menu its arrows and Enter pick, so Restart puts the song back to
 ; playing with Esc pausing it again.
 #include common/first_boot.dta
 (device guitar)
 (press down guitar)
 (expect {seat_has 0 guitar} 1)
+(key Down)
+(expect {seat_has 0 keyboard} 1)
 {game set_song shoutatthedevil}
 {{game get_player_config 0} set_difficulty easy}
 {{game get_player_config 0} set autoplay TRUE}
@@ -22,7 +24,7 @@
 (wait_screen pause_screen 10)
 (key Escape)
 (wait_screen game_screen 10)
-(expect {seat_has 0 guitar} 1)
+(expect {seat_has 0 keyboard} 1)
 ; Down to Restart, Enter picks it.
 (key Escape)
 (wait_screen pause_screen 10)

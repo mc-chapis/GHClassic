@@ -48,6 +48,27 @@ namespace gh2::input
                 held[a] = std::max(held[a], amount(s, now, keys));
     }
 
+    ActionPresses Presses::read(const Profile &profile, const Snapshot &now, const bool *keys)
+    {
+        ActionPresses down{};
+        for (int a = 0; a < kActionCount; ++a)
+        {
+            if (a == kWhammy)
+                continue;
+            const auto &sources = profile[a];
+            for (auto s = sources.begin(); s != sources.end(); ++s)
+                if (amount(*s, now, keys) > kHeld && amount(*s, m_was, m_keys.data()) <= kHeld &&
+                    std::find(sources.begin(), s, *s) == s)
+                    ++down[a];
+        }
+        m_was = now;
+        if (keys)
+            std::copy_n(keys, m_keys.size(), m_keys.begin());
+        else
+            m_keys.fill(false);
+        return down;
+    }
+
     std::optional<Source> moved(const Snapshot &rest, const Snapshot &now)
     {
         for (size_t i = 0; i < now.buttons.size() && i < rest.buttons.size(); ++i)

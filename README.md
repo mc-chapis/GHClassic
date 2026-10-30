@@ -1,3 +1,17 @@
+## This fork
+
+This fork features the following changes/additions to the project:
+
+- Keyboard input now reads `mode = pad` if set, whereas the original project hardcodes it to Guitar mode if no controllers are present;
+- Keyboard occupies its own seat, rather than sharing it with P1 (making keyboard+controller local multiplayer possible).
+  - This also means keyboard cannot be used as a fallback device for P1, since it's its own device now. Do not play this fork if this behavior is undesirable.
+- Multi-bind (i.e. `green = key A, key Z`) retriggers input if the one bind is pressed while the other is still held;
+- Setlist/engine switching enabled in Practice mode, not just quickplay.
+
+These changes were implemented via Codex and not tested thoroughly (they were designed for osu!mania-esque keyboard play; existing guitar/controller gameplay _shouldn't_ be affected). I'm also not an expert in low-level programming. **Proceed with caution.**
+
+The remainder of this file is the original README.md written by noahbaxter, without modifications.
+
 > [!NOTE]
 > GH Classic is in active development. Expect bugs, missing features and things changing between releases.
 
@@ -22,6 +36,7 @@
 - Photo mode
 
 ## Requirements
+
 - Legally obtained disc images for the following games in `.chd`, `.iso` or `.bin`:
   - **Required:**
     - Guitar Hero II (PS2), USA only (SLUS-21447)
@@ -79,6 +94,7 @@ scripts/play.sh "/path/to/Guitar Hero II (USA).iso"   # scripts\play.cmd on Wind
 ```sh
 sudo dnf install gcc-c++ libX11-devel libXext-devel libXrandr-devel libXcursor-devel libXfixes-devel libXi-devel libXScrnSaver-devel libXtst-devel libXinerama-devel libxkbcommon-devel wayland-devel wayland-protocols-devel mesa-libGL-devel mesa-libEGL-devel libdrm-devel mesa-libgbm-devel libdecor-devel alsa-lib-devel pulseaudio-libs-devel pipewire-devel dbus-devel ibus-devel systemd-devel libusb1-devel
 ```
+
 </details>
 
 ## How Was AI Used?

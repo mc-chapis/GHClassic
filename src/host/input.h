@@ -58,6 +58,9 @@ namespace gh2
     // A seat's controller as the last poll saw it, idle when no device is
     // in it. Seat N is libpad's port N. Callable from any thread.
     HostPad hostPad(int seat = 0);
+    // libpad's consumer: take pending binding presses, including the release
+    // between overlapping presses. Other readers use hostPad's live state.
+    HostPad readHostPad(int seat);
     // Whether the game sees a controller in that seat's port.
     bool seatPlugged(int seat);
     // While a song plays, a press on another device takes no seat.
@@ -107,7 +110,7 @@ namespace gh2
     void setScriptedKey(int scancode, bool down);
     // Whether that seat reads the device of that name: a scripted one's, a
     // real one's as the log names it, or "keyboard" for the keyboard
-    // standing in for it or for P1 with no controller. Callable from any
+    // seated or standing in for a missing controller. Callable from any
     // thread.
     bool seatHas(int seat, const std::string &name);
     // What a player is shown for it: its guitar's layout ("Wii guitar

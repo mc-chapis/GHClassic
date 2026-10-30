@@ -4,6 +4,7 @@
 
 #include "host/bindings.h"
 #include "host/capture.h"
+#include "host/pad_presses.h"
 #include "host/profiles.h"
 #include "settings/settings.h"
 
@@ -121,6 +122,88 @@ int main()
     CHECK(!parseSource("pad accel w 0 1"));
     CHECK(!parseSource("pad accel x 1 1"));
 
+    // Every source has its own edge, even while the action stays held.
+    {
+        Profile profile{};
+        profile[kGreen] = {*parseSource("key A"), *parseSource("key Z"), *parseSource("key A")};
+        profile[kWhammy] = {*parseSource("axis 0 0 1"), *parseSource("axis 1 0 1")};
+        Presses presses;
+        std::array<bool, SDL_SCANCODE_COUNT> keys{};
+        Snapshot now;
+        now.axes = {0.3f, 0.8f};
+        keys[SDL_SCANCODE_A] = true;
+        auto down = presses.read(profile, now, keys.data());
+        CHECK(down[kGreen] == 1 && down[kWhammy] == 0); // duplicate A counts once
+        CHECK(presses.read(profile, now, keys.data())[kGreen] == 0);
+        keys[SDL_SCANCODE_Z] = true;
+        CHECK(presses.read(profile, now, keys.data())[kGreen] == 1);
+        keys[SDL_SCANCODE_Z] = false;
+        CHECK(presses.read(profile, now, keys.data())[kGreen] == 0);
+        keys[SDL_SCANCODE_Z] = true;
+        CHECK(presses.read(profile, now, keys.data())[kGreen] == 1);
+        std::array<float, kActionCount> held{};
+        play(profile, now, keys.data(), held);
+        CHECK(held[kGreen] == 1.0f && held[kWhammy] == 0.8f);
+        // Editing a binding to an already held key creates no new edge.
+        profile[kRed] = {*parseSource("key Z")};
+        CHECK(presses.read(profile, now, keys.data())[kRed] == 0);
+        keys.fill(false);
+        presses.read(profile, now, keys.data());
+        keys[SDL_SCANCODE_A] = keys[SDL_SCANCODE_Z] = true;
+        CHECK(presses.read(profile, now, keys.data())[kGreen] == 2);
+    }
+    {
+        Profile profile{};
+        profile[kStrumDown] = {*parseSource("button 0"), *parseSource("hat 0 down"), *parseSource("axis 0 0 1"),
+                              *parseSource("pad a"), *parseSource("pad axis righty 0 1"),
+                              *parseSource("pad accel x 0 12")};
+        Presses presses;
+        Snapshot now{{false}, {SDL_HAT_CENTERED}, {0.0f}};
+        now.padButtons.resize(SDL_GAMEPAD_BUTTON_COUNT);
+        now.padAxes.resize(SDL_GAMEPAD_AXIS_COUNT);
+        now.accel = {0.0f, 0.0f, 0.0f};
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 0);
+        now.buttons[0] = true;
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 1);
+        now.hats[0] = SDL_HAT_DOWN;
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 1);
+        now.axes[0] = 0.5f;
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 0);
+        now.axes[0] = 0.6f;
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 1);
+        now.padButtons[SDL_GAMEPAD_BUTTON_SOUTH] = true;
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 1);
+        now.padAxes[SDL_GAMEPAD_AXIS_RIGHTY] = 0.8f;
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 1);
+        now.accel[0] = 9.0f;
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 1);
+        CHECK(presses.read(profile, now, nullptr)[kStrumDown] == 0);
+    }
+    // Host polls cannot consume the release that libpad must see. A burst
+    // keeps every press, including one already released by its first read.
+    {
+        PadPresses presses;
+        ButtonPresses down{};
+        down[9] = 1; // guitar green, R2
+        presses.publish(gh2::pad::kR2, down);
+        CHECK(presses.read() == gh2::pad::kR2);
+        presses.publish(gh2::pad::kR2, down);
+        presses.publish(gh2::pad::kR2, {});
+        CHECK(presses.read() == 0);
+        CHECK(presses.read() == gh2::pad::kR2);
+        CHECK(presses.read() == gh2::pad::kR2);
+        down[9] = 5;
+        presses.publish(gh2::pad::kR2, down);
+        presses.publish(0, {});
+        for (int i = 0; i < 5; ++i)
+        {
+            CHECK(presses.read() == 0);
+            CHECK(presses.read() == gh2::pad::kR2);
+        }
+        CHECK(presses.read() == 0);
+        CHECK(presses.read() == 0);
+    }
+
     // A device's section: its GUID's, else its name's (older files).
     const std::string path = bindingFilePath();
     {
@@ -144,6 +227,15 @@ int main()
     CHECK(formatSource(deviceBindings(file, "Guitar", "0300bbbb")->at(kGreen).at(0)) == "button 9");
     CHECK(formatSource(deviceBindings(file, "Guitar", "0300aaaa")->at(kRed).at(0)) == "button 2");
     CHECK(formatSource(file.sections.at("keyboard").at(kGreen).at(0)) == "key 1");
+
+    // A comma-delimited list has no four-binding limit; names with spaces
+    // and the comma key survive writing, loading and profile overlay.
+    const std::vector<Source> many = {*parseSource("key A"), *parseSource("key Z"), *parseSource("key H"),
+                                      *parseSource("key N"), *parseSource("key Right Shift"), *parseSource("key comma")};
+    CHECK(writeSection(path, keyboardSection(), {{kGreen, many}}));
+    file = loadBindingFile(path);
+    CHECK(file.sections.at(keyboardSection()).at(kGreen) == many);
+    CHECK(overlay(keyboardProfile(), &file.sections.at(keyboardSection()))[kGreen] == many);
 
     // [seats] is who sat where, beside the bindings and none of them.
     CHECK(writeSeats(path, {{"p1", "0300aaaa /dev/a"}, {"p2", "keyboard"}}));

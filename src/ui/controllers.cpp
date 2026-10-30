@@ -96,7 +96,7 @@ namespace gh2
 
         bool keyboard(const DeviceView &v)
         {
-            return v.kind == DeviceKind::kKeyboard;
+            return v.id.backend == DeviceId::kKeyboard;
         }
 
         void refresh()
@@ -228,7 +228,6 @@ namespace gh2
 
         std::string read(int row)
         {
-            // The keyboard plays as a guitar.
             if (row == kModeRow)
                 return s_shown.kind == DeviceKind::kGamepad ? "PAD" : "GUITAR";
             if (row >= kActionRows)
@@ -325,7 +324,7 @@ namespace gh2
                 case SDL_SCANCODE_KP_ENTER:
                     if (s_focus == kModeRow)
                     {
-                        if (!keyboard(s_shown) && !s_shown.id.none())
+                        if (!s_shown.id.none())
                             swapMode(s_shown.id);
                     }
                     else if (s_focus > kModeRow)

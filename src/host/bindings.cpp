@@ -370,6 +370,9 @@ namespace gh2::input
                        ";   pad accel x 0 12       a gamepad's accelerometer (x, y or z), rest then full\n"
                        ";\n"
                        "; An action takes several controls, comma separated, and none unbinds it.\n"
+                       "; For example: green = key A, key Z, key H, key N\n"
+                       "; Each new press retriggers even if another control is held; whammy\n"
+                       "; uses the largest value. There is no fixed limit on controls per action.\n"
                        "; A controller's mode = pad or mode = guitar sets how it plays, if it\n"
                        "; was taken for the other.\n";
             for (const std::string &line : kept)

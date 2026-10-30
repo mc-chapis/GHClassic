@@ -68,7 +68,7 @@ namespace gh2
                 // Its seat's guitar, idle until a device sits in it; a
                 // gamepad in a song lets go of D-Left, so GH2 reads it as
                 // the analog pad it is and plays it as one.
-                const HostPad pad = hostPad(port);
+                const HostPad pad = readHostPad(port);
                 uint16_t pressed = static_cast<uint16_t>(pad.pressed | (pad.joypad ? 0u : pad::kLeft));
                 if (port == 0)
                 {

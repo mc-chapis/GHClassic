@@ -1,9 +1,9 @@
 #pragma once
 
-// Quickplay's setlists, one per game: the game played's own
+// Quickplay, practice and Face-Off's setlists, one per game: the game played's own
 // (content/campaigns.h), which the game builds from its campaign, and every
 // other's, its songs in its tiers, shown in its own song list scene and
-// unlocked as the game's own are. Which is shown changes quickplay's list
+// unlocked as the game's own are. Which is shown changes the song list
 // and nothing else.
 //
 //   {setlist select <name>}  TRUE if it exists and was not already shown

@@ -5,6 +5,7 @@
 **THIS IS UNFINISHED.** Expect bugs, missing features and things changing between releases.
 
 ### New
+- Practice song select now supports holding Yellow to change setlists and pressing Blue to toggle the note engine, as Quickplay does
 - **Local multiplayer is back!** Just press start to join as P2 on the Multiplayer screen, and yellow to reorder. Controllers are now matched by GUID from a catalogue of guitar families. Hotplug, replug and last run's seats should be remembered in input.ini, and keyboard controls should ALWAYS be available to P1 as a last resort.
 - **Face-Off and Pro Face-Off** now show all unlocked content from all games including outfits, guitars, venues and setlists
 - **Controllers screen** under Options > Settings, or the pause menu's Settings. Lets you easily check mappings and rebind controls for individual gamepads, guitar controllers, and keyboards. Gamepad mode is now a toggle defaulted on for gamepads, and the help bar shows glyphs for gamepads and keyboard controls now

@@ -177,6 +177,14 @@ add_executable(seats_test EXCLUDE_FROM_ALL tests/seats_test.cpp src/host/seats.c
 target_include_directories(seats_test PRIVATE src)
 target_link_libraries(seats_test PRIVATE SDL3::SDL3)
 
+# Keyboard configuration, controller-screen edits and per-seat input routing.
+add_executable(keyboard_test EXCLUDE_FROM_ALL tests/keyboard_test.cpp src/dev/timing.cpp
+    src/host/bindings.cpp src/host/capture.cpp src/host/device.cpp src/host/device_screen.cpp
+    src/host/input.cpp src/host/layouts.cpp src/host/owner.cpp src/host/profiles.cpp
+    src/host/scripted_devices.cpp src/host/sdl_devices.cpp src/host/seats.cpp)
+target_include_directories(keyboard_test PRIVATE src)
+target_link_libraries(keyboard_test PRIVATE SDL3::SDL3)
+
 # Ogg Vorbis for 360 GH2's .mogg audio: libogg and libvorbis (BSD-3-Clause),
 # the decoder and vorbisfile only. Their own CMake wants an older CMake and
 # an installed Ogg, so their sources are built here (the lists in their

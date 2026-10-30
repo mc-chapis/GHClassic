@@ -15,7 +15,8 @@
 //     pad accel x 0 12       a gamepad's accelerometer (x, y or z), in m/s^2, rest then full
 //
 // An action takes any number of sources, comma separated, and is held when
-// any of them is. Whammy takes the largest amount.
+// any of them is. Each newly pressed source retriggers the action, even
+// while another is held. Whammy takes the largest amount without retriggering.
 
 #include "host/input.h"
 
@@ -84,6 +85,8 @@ namespace gh2::input
         uint8_t hat = 0;    // SDL_HAT_* bit
         float rest = 0.0f;  // axes: the value untouched
         float full = 1.0f;  // axes: the value fully pressed
+
+        bool operator==(const Source &) const = default;
     };
 
     // An action's amount past which it is held.
@@ -104,7 +107,7 @@ namespace gh2::input
     // input.ini: [keyboard], then one [device "<SDL joystick name>" <GUID>]
     // per kind of controller; older files name a device without its GUID. A
     // section lists only the actions it changes; the rest keep the built-in
-    // profile's. A controller's section may also say how a seat it sits in
+    // profile's. A device's section (including [keyboard]) may say how its seat
     // plays, `mode = pad` or `mode = guitar`, over what it was detected as.
     // Comments take whole lines, starting ; or #.
     struct BindingFile

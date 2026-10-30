@@ -1,8 +1,9 @@
-; Quickplay's song list, as the game's own (quickplay.dta, career.dta) but
+; Quickplay's and practice's song lists, as the game's own (quickplay.dta,
+; practice.dta, career.dta) but
 ; showing one of the setlists ({setlist}), picked from a list while yellow
 ; is held (picker.dta). Each shows in its own game's scene, which the panel
 ; takes at load, so a switch goes to the twin screen, whose own panel loads
-; the new one. Both leave for the main menu, never for each other.
+; the new one. Back leaves for the mode's setup, never the other twin.
 ;
 ; The setlists there are to show: GH2's, and each other game's whose disc is
 ; mounted ({mounted}, content/games.h).
@@ -18,9 +19,9 @@
    }
 }
 ; The yellow fret shows only where there is another setlist; blue names the
-; note engine quickplay judges by, and changes it. Set from the screen's
+; note engine the song is judged by, and changes it. Set from the screen's
 ; enter, after the help bar's own has put up the screen's default.
-{func ghc_qp_helpbar
+{func ghc_selsong_helpbar
    {do
       ($array)
       {set $array ()}
@@ -42,7 +43,7 @@
       (file
          {switch {gamecfg get mode}
             ((career multi_coop) ui/sel_song.milo)
-            ((quickplay multi_vs multi_fo) {setlist look})
+            ((quickplay practice multi_vs multi_fo) {setlist look})
             ui/sel_song_quickplay.milo
          }
       )
@@ -123,14 +124,14 @@
 {retype sel_song_panel $ghc_sel_song_panel}
 {if {! {exists sel_song_twin_panel}} {new GHPanel sel_song_twin_panel}}
 {retype sel_song_twin_panel $ghc_sel_song_panel}
-; The UI gets yellow as kPad_Circle and red as kPad_Tri.
-{func ghc_qp_button ($button)
+; Quickplay and practice share the setlist picker and note engine toggle.
+; The UI gets yellow as kPad_Circle and blue as kPad_Square.
+{func ghc_selsong_button ($button $back)
    {cond
       ({ghc_pick_button $button} TRUE)
-      ; Back to the show's setup (quickplay_setup.dta).
       ({== $button kPad_Tri}
          {synth play_sequence button_back.cue}
-         {ui goto_screen ghc_qp_setup_screen}
+         {ui goto_screen $back}
          TRUE
       )
       ({&& {== $button kPad_Circle} {> {size {ghc_setlists}} 1} {! {ui in_transition}}}
@@ -140,9 +141,15 @@
       ({&& {== $button kPad_Square} {> {note_engine choices} 1} {! {ui in_transition}}}
          {synth play_sequence button_toggle}
          {note_engine set {note_engine next {note_engine}}}
-         {ghc_qp_helpbar}
+         {ghc_selsong_helpbar}
          TRUE
       )
+      (TRUE FALSE)
+   }
+}
+{func ghc_qp_button ($button)
+   {cond
+      ({ghc_selsong_button $button ghc_qp_setup_screen} TRUE)
       ({&& {== $button kPad_Select} {! {ui in_transition}}}
          {synth play_sequence button_select}
          {ghc_pick_panel open_sticky (song_defaults) song_defaults}
@@ -182,7 +189,7 @@
       (sel_song_career FALSE)
       ; Back from a song in another game's venue (quickplay_pickers.dta), the
       ; next is GH2's again.
-      (enter {campaigns venues_from {campaigns live}} {ghc_qp_helpbar})
+      (enter {campaigns venues_from {campaigns live}} {ghc_selsong_helpbar})
       (SELECT_START_MSG {ui goto_screen qp_diff_screen} kDataUnhandled)
       (BUTTON_DOWN_MSG {ghc_qp_button $button})
       (ghc_picked ($game) {ghc_qp_picked sel_song_panel qp_selsong_twin_screen $game})
@@ -198,11 +205,37 @@
       (sel_song_career FALSE)
       ; Back from a song in another game's venue (quickplay_pickers.dta), the
       ; next is GH2's again.
-      (enter {campaigns venues_from {campaigns live}} {ghc_qp_helpbar})
+      (enter {campaigns venues_from {campaigns live}} {ghc_selsong_helpbar})
       (SELECT_START_MSG {ui goto_screen qp_diff_screen} kDataUnhandled)
       (BUTTON_DOWN_MSG {ghc_qp_button $button})
       (ghc_picked ($game) {ghc_qp_picked sel_song_twin_panel qp_selsong_screen $game})
       (ghc_option_text ($option) {ghc_qp_option_text $option})
       (ghc_chose ($option) {ghc_qp_chose $option})
+   )
+}
+; Practice keeps its part, difficulty, sections and speed screens. Only
+; the song list gains quickplay's picker and engine toggle; Select's song
+; defaults menu belongs to quickplay alone.
+{retype practice_selsong_screen
+   (
+      (panels meta sel_song_panel helpbar ghc_pick_panel)
+      (focus sel_song_panel)
+      (sel_song_career FALSE)
+      (enter {gamecfg set practice_speed 0} {ghc_selsong_helpbar})
+      (SELECT_START_MSG {ui goto_screen practice_selpart_screen} kDataUnhandled)
+      (BUTTON_DOWN_MSG {if_else {ghc_selsong_button $button training_screen} TRUE kDataUnhandled})
+      (ghc_picked ($game) {ghc_qp_picked sel_song_panel practice_selsong_twin_screen $game})
+   )
+}
+{if {! {exists practice_selsong_twin_screen}} {new GHScreen practice_selsong_twin_screen}}
+{retype practice_selsong_twin_screen
+   (
+      (panels meta sel_song_twin_panel helpbar ghc_pick_panel)
+      (focus sel_song_twin_panel)
+      (sel_song_career FALSE)
+      (enter {gamecfg set practice_speed 0} {ghc_selsong_helpbar})
+      (SELECT_START_MSG {ui goto_screen practice_selpart_screen} kDataUnhandled)
+      (BUTTON_DOWN_MSG {if_else {ghc_selsong_button $button training_screen} TRUE kDataUnhandled})
+      (ghc_picked ($game) {ghc_qp_picked sel_song_twin_panel practice_selsong_screen $game})
    )
 }

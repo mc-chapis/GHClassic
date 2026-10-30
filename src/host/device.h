@@ -34,6 +34,7 @@ namespace gh2::input
         Profile builtin; // its layout before input.ini
         Profile profile; // what it plays
         Snapshot now;    // its raw controls this poll
+        Presses presses; // physical controls down since the preceding poll
         Snapshot rest;   // at rest, for the Controllers screen
         // Each axis as first read, and the controls the log has named, so a
         // player's log says what each of theirs does.

@@ -39,6 +39,21 @@ namespace gh2::input
     // Each action's amount on `profile`: the most of its sources.
     void play(const Profile &profile, const Snapshot &now, const bool *keys, std::array<float, kActionCount> &held);
 
+    using ActionPresses = std::array<uint32_t, kActionCount>;
+
+    // Count each source crossing the held threshold, independently of the
+    // other sources of that action. Keep physical history so editing a
+    // profile cannot turn an already held control into a new press.
+    class Presses
+    {
+    public:
+        ActionPresses read(const Profile &profile, const Snapshot &now, const bool *keys);
+
+    private:
+        Snapshot m_was;
+        std::array<bool, SDL_SCANCODE_COUNT> m_keys{};
+    };
+
     // The first control away from rest, as a source: a button or hat
     // direction gone down, or an axis moved over half its travel.
     std::optional<Source> moved(const Snapshot &rest, const Snapshot &now);
