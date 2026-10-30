@@ -1,0 +1,67 @@
+; Requires at least one GH2 export in a scanned songs/ folder. Exercises
+; the yellow picker, selecting a custom song, and loading its audio/chart.
+#include common/first_boot.dta
+(expect {setlist has custom} 1)
+{gamecfg set mode quickplay}
+{ui goto_screen qp_selsong_screen}
+(wait_screen qp_selsong_screen)
+(wait 2)
+(hold 4096)
+(wait 1)
+{ghc_pick_panel step {'-' {'-' {size {ghc_setlists}} 1} {ghc_pick_panel get picked}}}
+(wait 1)
+(shot custom_picker)
+(hold 0)
+(wait_screen qp_selsong_twin_screen)
+(wait 3)
+(expect {setlist shown} custom)
+(shot custom_setlist)
+{set $custom_song {song_provider get_symbol 0}}
+(press green)
+(wait_screen qp_diff_screen)
+(expect {game get_song} $custom_song)
+(press down)
+(press down)
+(press down)
+{{game get_player_config 0} set autoplay TRUE}
+(press green)
+(wait_screen game_screen 60)
+(wait_until {> {ghc_play gems} 0} 30)
+(wait_until {> {player0 gems_hit} 0} 90)
+(wait 8)
+(expect {> {player0 gems_hit} 0} 1)
+(shot custom_gameplay)
+{meta_loading_nosave_goto main_screen}
+(wait_screen main_screen 60)
+{gamecfg set mode practice}
+{ui goto_screen practice_selsong_screen}
+(wait_screen practice_selsong_screen)
+(wait 2)
+(expect {setlist shown} custom)
+(press green)
+(wait_screen practice_selpart_screen)
+(wait 1)
+(press green)
+(wait_screen practice_diff_screen)
+(wait 1)
+(press down)
+(press down)
+(press down)
+(press green)
+(wait_screen practice_sel_section_screen)
+(wait 2)
+(shot custom_sections)
+(press green)
+(wait_screen practice_sel_speed_screen)
+(wait 1)
+{{game get_player_config 0} set autoplay TRUE}
+{gamecfg set (practice_sections 0) 0}
+{gamecfg set (practice_sections 1) 1}
+{gamecfg set practice_speed 3}
+{ui goto_screen practice_loading_screen}
+(wait_screen practice_game_screen 60)
+(expect {gamecfg get practice_speed} 3)
+(wait 8)
+(expect {> {taskmgr seconds} 4} 1)
+(shot custom_practice)
+(quit)

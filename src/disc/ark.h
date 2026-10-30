@@ -24,6 +24,9 @@ namespace gh2::ark
     // one built at startup.
     void addFile(const std::string &path, std::vector<uint8_t> bytes);
 
+    // A loose file streamed from disk, opened only when first requested.
+    void addLooseFile(const std::string &path, const std::filesystem::path &file);
+
     // A file served at `path` ahead of every disc, made when the game first
     // asks for it: its size, and a reader of its bytes from an offset that
     // returns how many it gave. None if it cannot be made.

@@ -330,6 +330,8 @@ namespace gh2::setlists
         script::Node setlistCommand(const script::Call &call)
         {
             const std::string op = call.symbol(1);
+            if (op == "has")
+                return {s_setlists.count(call.symbol(2)) != 0u ? 1u : 0u, script::kInt};
             if (op == "select")
             {
                 const std::string name = call.symbol(2);
@@ -363,7 +365,7 @@ namespace gh2::setlists
                 w.first = windowAround(w.tiers, at);
                 return {static_cast<uint32_t>(at - w.first), script::kInt};
             }
-            std::cerr << "[setlist] usage: {setlist select <name>}, {setlist scroll <row>}, {setlist look|shown}"
+            std::cerr << "[setlist] usage: {setlist has|select <name>}, {setlist scroll <row>}, {setlist look|shown}"
                       << std::endl;
             return {};
         }

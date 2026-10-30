@@ -351,10 +351,9 @@ namespace gh2::settings
         s_dataDir = dir;
     }
 
-    // A portable install keeps it all beside the executable. Otherwise each
-    // track has a directory of its own. The project was ghrecomp: its
+    // Each track has a directory of its own. The project was ghrecomp: its
     // directory, when it is the only one, is moved over whole the first time.
-    std::string userDataPath(const std::string &file)
+    static std::string preferenceDataPath(const std::string &file)
     {
         static const std::string dir = []
         {
@@ -364,8 +363,6 @@ namespace gh2::settings
                 std::filesystem::create_directories(s_dataDir, error);
                 return (std::filesystem::path(s_dataDir) / "").string();
             }
-            if (s_dataDir.empty() && disc::portable())
-                return std::string(SDL_GetBasePath());
             const bool own = build::kExperimental && s_dataDir.empty();
             char *pref = SDL_GetPrefPath("", own ? "GHClassicExperimental" : "GHClassic");
             if (!pref)
@@ -391,6 +388,27 @@ namespace gh2::settings
             return made;
         }();
         return dir + file;
+    }
+
+    std::string userDataPath(const std::string &file)
+    {
+        if (s_dataDir.empty() && disc::portable())
+            return std::string(SDL_GetBasePath()) + file;
+        return preferenceDataPath(file);
+    }
+
+    std::vector<std::filesystem::path> contentPaths(const std::string &folder)
+    {
+        std::vector<std::filesystem::path> paths;
+        if (const char *base = SDL_GetBasePath())
+        {
+            const std::string text = base;
+            paths.push_back(std::filesystem::path(std::u8string(text.begin(), text.end())) / folder);
+        }
+        const std::string pref = preferenceDataPath("");
+        if (!pref.empty())
+            paths.push_back(std::filesystem::path(std::u8string(pref.begin(), pref.end())) / folder);
+        return paths;
     }
 
     std::string besideSettings(const std::string &file)

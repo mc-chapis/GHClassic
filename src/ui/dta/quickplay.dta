@@ -15,6 +15,7 @@
       {foreach $game (gh1 gh2 gh2x gh80s)
          {if {|| {== $game gh2} {mounted $game}} {push_back $lists $game}}
       }
+      {if {setlist has custom} {push_back $lists custom}}
       $lists
    }
 }

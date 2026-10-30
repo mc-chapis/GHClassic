@@ -7,6 +7,7 @@
 // and nothing else.
 //
 //   {setlist select <name>}  TRUE if it exists and was not already shown
+//   {setlist has <name>}     TRUE if that setlist was loaded
 //   {setlist look}           the shown one's song list scene
 //   {setlist shown}          the shown one's name
 //   {setlist scroll <row>}   the row the list is on once a setlist too long

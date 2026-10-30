@@ -7,6 +7,16 @@ This fork features the following changes/additions to the project:
   - This also means keyboard cannot be used as a fallback device for P1, since it's its own device now. Do not play this fork if this behavior is undesirable.
 - Multi-bind (i.e. `green = key A, key Z`) retriggers input if the one bind is pressed while the other is still held;
 - Setlist/engine switching enabled in Practice mode, not just quickplay.
+- Custom GH2 songs exported by Onyx: copy each export folder into `songs/`
+  beside the executable or in `%APPDATA%/GHClassic/songs/` on Windows (the
+  normal user data directory on other platforms). Both locations are scanned
+  at startup. Hold yellow in song select to choose **CUSTOM**, which appears
+  when at least one valid song is found. Restart after adding songs.
+  Keep `songs.dta` and its `.mid`, `.vgs`, and optional `.voc` files together;
+  Onyx's generated folder names and metadata need no editing. These are GH2
+  PS2 exports, not Clone Hero or Rock Band packages. Duplicate song IDs prefer
+  the copy beside the executable; invalid or incomplete exports are logged in
+  `GHClassic.log`. Custom songs are unlocked in Quickplay, Practice and Face-Off.
 
 These changes were implemented via Codex and not tested thoroughly (they were designed for osu!mania-esque keyboard play; existing guitar/controller gameplay _shouldn't_ be affected). I'm also not an expert in low-level programming. **Proceed with caution.**
 

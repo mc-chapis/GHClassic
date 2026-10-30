@@ -162,6 +162,11 @@ add_executable(save_test EXCLUDE_FROM_ALL
 target_include_directories(save_test PRIVATE src)
 target_link_libraries(save_test PRIVATE miniz)
 
+# Loose GH2 song discovery and Onyx's metadata/path layout, without a disc.
+add_executable(custom_songs_test EXCLUDE_FROM_ALL tests/custom_songs_test.cpp
+    src/content/custom_song_files.cpp src/formats/dtb_text.cpp)
+target_include_directories(custom_songs_test PRIVATE src)
+
 # Which release the game offers as an update.
 add_executable(releases_test EXCLUDE_FROM_ALL tests/releases_test.cpp src/host/releases.cpp)
 target_include_directories(releases_test PRIVATE src)
@@ -253,6 +258,8 @@ set(GHC_GAME_SOURCES
     src/content/payouts.cpp
     src/content/setlists.cpp
     src/content/songs.cpp
+    src/content/custom_song_files.cpp
+    src/content/custom_songs.cpp
     src/content/status_line.cpp
     src/content/tour_or_higher.cpp
     src/dev/cheats.cpp

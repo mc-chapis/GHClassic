@@ -6,7 +6,9 @@
 // and the "PS2 mode" preset later.
 
 #include <functional>
+#include <filesystem>
 #include <string>
+#include <vector>
 
 namespace gh2::settings
 {
@@ -178,6 +180,11 @@ namespace gh2::settings
 
     // `file` in the user data directory, which is made if missing.
     std::string userDataPath(const std::string &file);
+
+    // Loose content beside the executable first, then in the SDL user data
+    // directory, even for portable installs. Honors useDataDir and tracks
+    // just as settings do. Callers merge the folders in this priority order.
+    std::vector<std::filesystem::path> contentPaths(const std::string &folder);
 
     // `file` beside settings.ini, wherever usePath put that.
     std::string besideSettings(const std::string &file);

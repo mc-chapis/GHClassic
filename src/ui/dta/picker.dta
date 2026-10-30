@@ -19,7 +19,7 @@
       ; From the ARK root: a path resolves against the file its array came
       ; from, and this one comes from no file.
       (file ui/helpbar.milo)
-      (rows (pt0.txt pt1.txt pt2.txt pt3.txt))
+      (rows (pt0.txt pt1.txt pt2.txt pt3.txt pt4.txt))
       ; The list's box and the picked row's fill (box.dta), each with its
       ; colour, how much it hides, and where it draws among the scene's.
       (boxes ((pick_bg 0 0 0 0.875 0) (pick_fill 1 1 1 0.25 1)))

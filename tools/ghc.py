@@ -795,12 +795,13 @@ def cmd_ci(argv):
         env, quiet=True)
     run(["cmake", "--build", ci, "-j", jobs, "--target", "ps2_runtime", "chdr-static", "SDL3-static", "volk",
          "vk-bootstrap", "glslang-standalone", "mpeg2", "save_test", "releases_test", "input_test", "seats_test",
-         "keyboard_test"], env)
+         "keyboard_test", "custom_songs_test"], env)
     run([ci / f"save_test{EXE}"], env)
     run([ci / f"releases_test{EXE}"], env)
     run([ci / f"input_test{EXE}"], env)
     run([ci / f"seats_test{EXE}"], env)
     run([ci / f"keyboard_test{EXE}"], env)
+    run([ci / f"custom_songs_test{EXE}"], env)
 
 
 def cmd_bind(argv):

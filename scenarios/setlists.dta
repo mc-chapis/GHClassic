@@ -9,7 +9,7 @@
 (wait 2)
 (shot list)
 (expect {setlist shown} gh2)
-(expect {size {ghc_setlists}} {'+' {'+' 1 {mounted gh1}} {'+' {mounted gh2x} {mounted gh80s}}})
+(expect {size {ghc_setlists}} {'+' {setlist has custom} {'+' {'+' 1 {mounted gh1}} {'+' {mounted gh2x} {mounted gh80s}}}})
 (expect {setlist select gh1} {mounted gh1})
 {setlist select gh2}
 (expect {setlist select gh80s} {mounted gh80s})

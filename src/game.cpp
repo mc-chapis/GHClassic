@@ -20,6 +20,7 @@
 #include "content/campaigns.h"
 #include "content/setlists.h"
 #include "content/songs.h"
+#include "content/custom_songs.h"
 #include "content/status_line.h"
 #include "ui/fast_boot.h"
 #include "frame_step.h"
@@ -167,6 +168,7 @@ namespace
         gh2::setlists::install(runtime, gh2::kSlus21447);
         gh2::encores::install(runtime, gh2::kSlus21447);
         gh2::status_line::install(runtime, gh2::kSlus21447);
+        gh2::custom_songs::install();
         gh2::songs::install();
         gh2::locale::install(runtime, gh2::kSlus21447);
         gh2::games::install(runtime, gh2::kSlus21447);

@@ -22,6 +22,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -505,6 +506,29 @@ namespace gh2::ark
     void addMade(const std::string &path, std::function<std::optional<Made>()> make)
     {
         s_made[key(path.c_str())] = std::move(make);
+    }
+
+    void addLooseFile(const std::string &path, const std::filesystem::path &file)
+    {
+        addMade(path, [file]() -> std::optional<Made> {
+            std::error_code error;
+            const auto size = std::filesystem::file_size(file, error);
+            if (error || size == 0u || size > std::numeric_limits<uint32_t>::max())
+                return std::nullopt;
+            auto in = std::make_shared<std::ifstream>(file, std::ios::binary);
+            if (!*in)
+                return std::nullopt;
+            auto mutex = std::make_shared<std::mutex>();
+            return Made{static_cast<uint32_t>(size), [in, mutex, size](uint64_t offset, uint8_t *dst, size_t want) {
+                const std::lock_guard lock(*mutex);
+                if (offset >= size)
+                    return size_t{0};
+                in->clear();
+                in->seekg(static_cast<std::streamoff>(offset));
+                in->read(reinterpret_cast<char *>(dst), static_cast<std::streamsize>(std::min<uint64_t>(want, size - offset)));
+                return static_cast<size_t>(in->gcount());
+            }};
+        });
     }
 
     void addMade(size_t disc, const std::string &path, std::function<std::optional<Made>()> make,
