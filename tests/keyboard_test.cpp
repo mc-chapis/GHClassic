@@ -4,6 +4,7 @@
 #include "host/devices.h"
 #include "host/input.h"
 #include "host/layouts.h"
+#include "host/profiles.h"
 
 #include <SDL3/SDL.h>
 
@@ -202,6 +203,61 @@ int main()
     CHECK(hostPad(0).pressed == pad::kR2 && hostPad(1).pressed == 0);
     key(SDL_SCANCODE_RETURN, false);
     CHECK(menuControls().kind == DeviceKind::kKeyboard);
+
+    // Name entry needs Start, not Enter's usual green/Next shortcut. A
+    // held results-screen confirmation must be released before accepting.
+    key(SDL_SCANCODE_RETURN, true);
+    songScreen(SongScreen::kNameEntry);
+    pollInput(false);
+    CHECK(hostPad(0).pressed == 0);
+    key(SDL_SCANCODE_RETURN, false);
+    key(SDL_SCANCODE_RETURN, true);
+    CHECK(hostPad(0).pressed == pad::kStart && hostPad(1).pressed == 0);
+    CHECK(readHostPad(0).pressed == pad::kStart);
+    key(SDL_SCANCODE_RETURN, false);
+    key(SDL_SCANCODE_1, true);
+    CHECK(hostPad(0).pressed == pad::kR2); // Next still adds a letter
+    key(SDL_SCANCODE_1, false);
+    key(SDL_SCANCODE_UP, true);
+    CHECK(hostPad(0).pressed == pad::kUp);
+    key(SDL_SCANCODE_UP, false);
+    key(SDL_SCANCODE_ESCAPE, true);
+    CHECK(hostPad(0).pressed == pad::kCircle);
+    key(SDL_SCANCODE_ESCAPE, false);
+
+    // A remapped Start accepts too; Enter remains a menu shortcut when it
+    // is no longer Start. Check both the guitar and pad keyboard modes.
+    CHECK(editSection("", "", keyboardProfile(), true, [](Section &lines, std::string &) {
+        lines[kStart] = {*parseSource("key Backspace")};
+    }));
+    pollInput(false);
+    key(SDL_SCANCODE_BACKSPACE, true);
+    CHECK(hostPad(0).pressed == pad::kStart && hostPad(1).pressed == 0);
+    key(SDL_SCANCODE_BACKSPACE, false);
+    key(SDL_SCANCODE_RETURN, true);
+    CHECK(hostPad(0).pressed == pad::kR2);
+    key(SDL_SCANCODE_RETURN, false);
+    CHECK(editSection("", "", keyboardProfile(), true, [](Section &, std::string &mode) { mode = "pad"; }));
+    pollInput(false);
+    lockSeats(true);
+    pollInput(false);
+    key(SDL_SCANCODE_BACKSPACE, true);
+    CHECK(hostPad(0).joypad && hostPad(0).pressed == pad::kStart);
+    key(SDL_SCANCODE_BACKSPACE, false);
+    key(SDL_SCANCODE_RETURN, true);
+    CHECK(hostPad(0).pressed == pad::kCross);
+    key(SDL_SCANCODE_RETURN, false);
+    lockSeats(false);
+    songScreen(SongScreen::kOther);
+    pollInput(false);
+    key(SDL_SCANCODE_RETURN, true);
+    CHECK(hostPad(0).pressed == pad::kR2); // ordinary menus still confirm
+    key(SDL_SCANCODE_RETURN, false);
+    CHECK(editSection("", "", keyboardProfile(), true, [](Section &lines, std::string &mode) {
+        lines.erase(kStart);
+        mode.clear();
+    }));
+    pollInput(false);
 
     // A seated keyboard cannot also play for a disconnected P2.
     removeScriptedDevice("guitar");

@@ -24,6 +24,7 @@ namespace gh2::input
         kMenu,
         kPlayers,     // Multiplayer's screen, where players join and reorder
         kControllers, // the Controllers screen, where devices only show
+        kNameEntry,   // high scores: Start accepts the name, green adds a letter
         // A song is up and holds the seats: on a screen of its own besides
         // these two (loading, results), played, or paused.
         kSong,

@@ -126,8 +126,8 @@ namespace gh2
             return {seatHas(static_cast<int>(call.number(1)), call.symbol(2)) ? 1u : 0u, script::kInt};
         }
 
-        // A song's screens, by name, for the keyboard's keys in it (input.h):
-        // the two it is played on and the two pause menus.
+        // Screens with special keyboard handling (input.h): gameplay,
+        // pause menus and high-score name entry.
         struct GotoScreenTag;
         void onGotoScreen(uint8_t *rdram, R5900Context *ctx, PS2Runtime *)
         {
@@ -136,6 +136,7 @@ namespace gh2
             const std::string name = text != 0u ? reinterpret_cast<const char *>(getMemPtr(rdram, text)) : "";
             songScreen(name == "game_screen" || name == "practice_game_screen"  ? SongScreen::kPlaying
                        : name == "pause_screen" || name == "pract_pause_screen" ? SongScreen::kPaused
+                       : name == "highscore_screen"                            ? SongScreen::kNameEntry
                                                                                 : SongScreen::kOther);
             // Practice draws no venue, which holds the seats in a song
             // (native_rnd.cpp), so its song's own screens do, from its

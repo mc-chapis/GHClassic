@@ -1,0 +1,35 @@
+; A keyboard-only quickplay player can edit and accept a high-score name.
+; Enter confirms results, then acts as Start in name entry, without also
+; adding a letter through its usual green/Next menu shortcut.
+#include common/first_boot.dta
+(key Down)
+(expect {seat_has 0 keyboard} 1)
+{highscores set_default_name KEYBOARD}
+{gamecfg set mode quickplay}
+{game set_song shoutatthedevil}
+{{game get_player_config 0} set_difficulty expert}
+{{game get_player_config 0} set autoplay TRUE}
+{game set_quickplay}
+{ui goto_screen loading_screen}
+(wait_screen game_screen 60)
+(wait_until {> {player0 score} 50000} 180)
+{player0 win 5}
+(wait_screen endgame_screen 400)
+(wait 3)
+(key Return)
+(wait_screen highscore_screen 30)
+(wait 1)
+(expect {seat_has 0 keyboard} 1)
+(expect {{highscore_panel get_active_ten} is_done} 0)
+(keys 1)
+(wait 0.15)
+(keys)
+(wait 0.25)
+(key Up)
+{set $accepted_name {{highscore_panel get_active_ten} get_text}}
+(key Return)
+(wait_screen complete_screen 20)
+{highscores get_highscore 0 $name $score}
+(expect $name $accepted_name)
+(expect $score {player0 score})
+(quit)

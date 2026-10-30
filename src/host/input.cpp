@@ -108,6 +108,8 @@ namespace gh2
         {
             if (controllersScreen())
                 return Mode::kControllers;
+            if (s_songScreen.load(std::memory_order_relaxed) == SongScreen::kNameEntry)
+                return Mode::kNameEntry;
             if (songUp())
                 switch (s_songScreen.load(std::memory_order_relaxed))
                 {
@@ -353,12 +355,17 @@ namespace gh2
                     break;
 
                 // Its keys as the seat's mode plays them, in a menu as a
-                // menu takes them, its Enter Start only in a song playing.
+                // menu takes them. Name entry needs the bound Start to
+                // accept the name, rather than green to add another letter.
                 HostPad &port = pads[to];
                 played[to] = &r;
                 port = padOf(r.held, port.joypad);
                 if (mode != Mode::kPlaying)
-                    port.pressed = static_cast<uint16_t>(menuButtons(padOf(r.held).pressed, port.joypad) & ~pad::kStart);
+                {
+                    port.pressed = menuButtons(padOf(r.held).pressed, port.joypad);
+                    if (mode != Mode::kNameEntry)
+                        port.pressed &= ~pad::kStart;
+                }
                 // Its menu keys. In a song playing only its Esc, as Start,
                 // and in the song's pause menu Esc is Start too.
                 for (const MenuKey &k : kMenuKeys)
@@ -367,6 +374,8 @@ namespace gh2
                     if (mode != s_modeWas && keys[k.key])
                         s_keyWait[k.key] = true;
                     if (mode == Mode::kPlaying && !esc)
+                        continue;
+                    if (mode == Mode::kNameEntry && k.key == SDL_SCANCODE_RETURN && r.held[kStart] > kHeld)
                         continue;
                     if (!keys[k.key])
                         s_keyWait[k.key] = false;

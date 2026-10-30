@@ -68,15 +68,16 @@ namespace gh2
     void lockSeats(bool locked);
     // Practice's song is up, holding the seats as a venue's song does.
     void practicing(bool on);
-    // Which screen of a song is up: in one playing, the keyboard's menu
+    // Which screen is up: in a song playing, the keyboard's menu
     // keys would be a guitar's frets and strums, so only its Esc works,
     // as Start; in its pause menu Esc is Start too, to resume. Callable
-    // from any thread.
+    // from any thread. Name entry uses the bound Start to accept the name.
     enum class SongScreen
     {
         kOther,
         kPlaying,
         kPaused,
+        kNameEntry,
     };
     void songScreen(SongScreen screen);
 
