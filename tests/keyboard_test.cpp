@@ -140,8 +140,11 @@ int main()
     key(SDL_SCANCODE_A, false);
     key(SDL_SCANCODE_S, false);
     key(SDL_SCANCODE_ESCAPE, true);
-    CHECK(hostPad(1).pressed == pad::kStart && hostPad(0).pressed == 0);
+    CHECK(hostPad(1).pressed == 0 && hostPad(0).pressed == 0);
     key(SDL_SCANCODE_ESCAPE, false);
+    key(SDL_SCANCODE_RETURN, true);
+    CHECK(hostPad(1).pressed == pad::kStart && hostPad(0).pressed == 0);
+    key(SDL_SCANCODE_RETURN, false);
 
     // Mode edits on the Controllers screen preserve keyboard identity,
     // custom bindings and the mode of a song already in progress.
@@ -192,7 +195,7 @@ int main()
     CHECK(formatSource(keyboardLayout()[kGreen].front()) == "key 1");
     screen(false);
 
-    // Keyboard can trade to P1 and use menu shortcuts independently of P2.
+    // Keyboard can trade to P1 and use its bound menu actions independently of P2.
     setPlayersStep(true);
     key(SDL_SCANCODE_3, true);
     CHECK(seatHas(0, "keyboard") && seatHas(1, "guitar"));
@@ -200,11 +203,14 @@ int main()
     setPlayersStep(false);
     pollInput(false);
     key(SDL_SCANCODE_RETURN, true);
-    CHECK(hostPad(0).pressed == pad::kR2 && hostPad(1).pressed == 0);
+    CHECK(hostPad(0).pressed == pad::kStart && hostPad(1).pressed == 0);
     key(SDL_SCANCODE_RETURN, false);
+    key(SDL_SCANCODE_1, true);
+    CHECK(hostPad(0).pressed == pad::kR2 && hostPad(1).pressed == 0);
+    key(SDL_SCANCODE_1, false);
     CHECK(menuControls().kind == DeviceKind::kKeyboard);
 
-    // Name entry needs Start, not Enter's usual green/Next shortcut. A
+    // Name entry needs bound Start; green/Next adds a letter. A
     // held results-screen confirmation must be released before accepting.
     key(SDL_SCANCODE_RETURN, true);
     songScreen(SongScreen::kNameEntry);
@@ -222,11 +228,14 @@ int main()
     CHECK(hostPad(0).pressed == pad::kUp);
     key(SDL_SCANCODE_UP, false);
     key(SDL_SCANCODE_ESCAPE, true);
-    CHECK(hostPad(0).pressed == pad::kCircle);
+    CHECK(hostPad(0).pressed == 0);
     key(SDL_SCANCODE_ESCAPE, false);
+    key(SDL_SCANCODE_2, true);
+    CHECK(hostPad(0).pressed == pad::kCircle);
+    key(SDL_SCANCODE_2, false);
 
-    // A remapped Start accepts too; Enter remains a menu shortcut when it
-    // is no longer Start. Check both the guitar and pad keyboard modes.
+    // A remapped Start accepts too; unbound Enter has no effect.
+    // Check both the guitar and pad keyboard modes.
     CHECK(editSection("", "", keyboardProfile(), true, [](Section &lines, std::string &) {
         lines[kStart] = {*parseSource("key Backspace")};
     }));
@@ -235,7 +244,7 @@ int main()
     CHECK(hostPad(0).pressed == pad::kStart && hostPad(1).pressed == 0);
     key(SDL_SCANCODE_BACKSPACE, false);
     key(SDL_SCANCODE_RETURN, true);
-    CHECK(hostPad(0).pressed == pad::kR2);
+    CHECK(hostPad(0).pressed == 0);
     key(SDL_SCANCODE_RETURN, false);
     CHECK(editSection("", "", keyboardProfile(), true, [](Section &, std::string &mode) { mode = "pad"; }));
     pollInput(false);
@@ -245,14 +254,17 @@ int main()
     CHECK(hostPad(0).joypad && hostPad(0).pressed == pad::kStart);
     key(SDL_SCANCODE_BACKSPACE, false);
     key(SDL_SCANCODE_RETURN, true);
-    CHECK(hostPad(0).pressed == pad::kCross);
+    CHECK(hostPad(0).pressed == 0);
     key(SDL_SCANCODE_RETURN, false);
     lockSeats(false);
     songScreen(SongScreen::kOther);
     pollInput(false);
     key(SDL_SCANCODE_RETURN, true);
-    CHECK(hostPad(0).pressed == pad::kR2); // ordinary menus still confirm
+    CHECK(hostPad(0).pressed == 0);
     key(SDL_SCANCODE_RETURN, false);
+    key(SDL_SCANCODE_1, true);
+    CHECK(hostPad(0).pressed == pad::kR2); // bound green confirms in ordinary menus
+    key(SDL_SCANCODE_1, false);
     CHECK(editSection("", "", keyboardProfile(), true, [](Section &lines, std::string &mode) {
         lines.erase(kStart);
         mode.clear();

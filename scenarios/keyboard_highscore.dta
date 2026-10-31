@@ -1,6 +1,5 @@
 ; A keyboard-only quickplay player can edit and accept a high-score name.
-; Enter confirms results, then acts as Start in name entry, without also
-; adding a letter through its usual green/Next menu shortcut.
+; Bound green (1) confirms results; bound Start (Enter) accepts the name.
 #include common/first_boot.dta
 (key Down)
 (expect {seat_has 0 keyboard} 1)
@@ -16,7 +15,7 @@
 {player0 win 5}
 (wait_screen endgame_screen 400)
 (wait 3)
-(key Return)
+(key 1)
 (wait_screen highscore_screen 30)
 (wait 1)
 (expect {seat_has 0 keyboard} 1)

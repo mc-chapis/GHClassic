@@ -20,4 +20,7 @@
 (expect {seat_has 0 keyboard} 1)
 (expect {seat_has 1 guitar} 1)
 (expect {{ui current_screen} name} multi_screen)
+; Its bound red (2) backs out, as P1's.
+(key 2)
+(wait_screen main_screen 10)
 (quit)

@@ -79,24 +79,8 @@ namespace gh2
         HostFly s_fly, s_scriptedFly;
         uint64_t s_pressEventNs = 0; // the host thread's own
 
-        // The keyboard in a menu, on the port it drives: the arrows move,
-        // Enter picks and Esc backs out, as green and red.
-        struct MenuKey
-        {
-            SDL_Scancode key;
-            uint16_t bit;
-        };
-        const MenuKey kMenuKeys[] = {
-            {SDL_SCANCODE_UP, pad::kUp},       {SDL_SCANCODE_DOWN, pad::kDown},
-            {SDL_SCANCODE_LEFT, pad::kLeft},   {SDL_SCANCODE_RIGHT, pad::kRight},
-            {SDL_SCANCODE_RETURN, pad::kR2},   {SDL_SCANCODE_ESCAPE, pad::kCircle},
-        };
-        // The host thread's: the mode last poll, and the menu keys held as
-        // the mode changed, which do nothing until let go: the Enter that
-        // paused would pick Resume, the Escape that left the Controllers
-        // screen would back out of the menu under it.
+        // The host thread's: the mode last poll.
         Mode s_modeWas = Mode::kMenu;
-        std::array<bool, SDL_SCANCODE_COUNT> s_keyWait{};
         // The keyboard: anything of its held last poll, and whether it plays
         // nothing until it lets go, the press that stood it in for a seat or
         // what it held as the mode changed.
@@ -163,7 +147,7 @@ namespace gh2
                                             ? (pad.joypad ? kJoypadButtons[a] : kActions[a].button)
                                             : menuButtons(kActions[a].button, pad.joypad);
                 // Only actions that actually reached this port may retrigger:
-                // mode changes, joining and menu shortcuts can suppress them.
+                // mode changes and joining can suppress them.
                 if ((pad.pressed & button) == 0)
                     continue;
                 for (int b = 0; b < 16; ++b)
@@ -250,15 +234,7 @@ namespace gh2
                 reads.push_back(r);
             }
         for (Read &r : reads)
-        {
             r.buttons = padOf(r.held).pressed;
-            // Menu shortcuts claim the keyboard's seat too, even when its
-            // action bindings have been changed in input.ini.
-            if (r.keyboard())
-                for (const MenuKey &k : kMenuKeys)
-                    if (keys[k.key])
-                        r.buttons |= k.bit;
-        }
 
         // On the Controllers screen devices only show there. Leaving it,
         // nothing held there plays until let go: red held to leave would
@@ -297,7 +273,7 @@ namespace gh2
         for (int seat = 0; seat < kSeats; ++seat)
         {
             const bool joypad = s_seats.pad(seat) && songUp();
-            // The keyboard adds its menu shortcuts below, on its own seat.
+            // The keyboard is routed below, on its own seat.
             if (seated[seat] && !seated[seat]->keyboard() && !s_seats.holding(*seated[seat]))
             {
                 pads[seat] = padOf(seated[seat]->held, joypad);
@@ -333,8 +309,6 @@ namespace gh2
             if (r.keyboard())
             {
                 bool any = std::any_of(r.held.begin(), r.held.end(), [](float h) { return h > kHeld; });
-                for (const MenuKey &k : kMenuKeys)
-                    any = any || keys[k.key];
                 if (any && !s_keyboardWas && keyboardSeat < 0 && to >= 0 && inSong(mode) && s_seats.away(to) &&
                     !s_standIn[to].load(std::memory_order_relaxed))
                 {
@@ -354,36 +328,13 @@ namespace gh2
                     (keyboardSeat < 0 && !s_standIn[to].load(std::memory_order_relaxed)))
                     break;
 
-                // Its keys as the seat's mode plays them, in a menu as a
-                // menu takes them. Name entry needs the bound Start to
-                // accept the name, rather than green to add another letter.
                 HostPad &port = pads[to];
                 played[to] = &r;
                 port = padOf(r.held, port.joypad);
+                // Its keys as the seat's mode plays them, in a menu as a
+                // menu takes them: only what its layout binds.
                 if (mode != Mode::kPlaying)
-                {
                     port.pressed = menuButtons(padOf(r.held).pressed, port.joypad);
-                    if (mode != Mode::kNameEntry)
-                        port.pressed &= ~pad::kStart;
-                }
-                // Its menu keys. In a song playing only its Esc, as Start,
-                // and in the song's pause menu Esc is Start too.
-                for (const MenuKey &k : kMenuKeys)
-                {
-                    const bool esc = k.key == SDL_SCANCODE_ESCAPE;
-                    if (mode != s_modeWas && keys[k.key])
-                        s_keyWait[k.key] = true;
-                    if (mode == Mode::kPlaying && !esc)
-                        continue;
-                    if (mode == Mode::kNameEntry && k.key == SDL_SCANCODE_RETURN && r.held[kStart] > kHeld)
-                        continue;
-                    if (!keys[k.key])
-                        s_keyWait[k.key] = false;
-                    else if (!s_keyWait[k.key])
-                        port.pressed |= esc && (mode == Mode::kPlaying || mode == Mode::kPaused)
-                                            ? pad::kStart
-                                            : menuButtons(k.bit, port.joypad);
-                }
             }
         const bool modeChanged = s_modeWas != mode;
         s_modeWas = mode;
